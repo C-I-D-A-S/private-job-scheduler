@@ -18,5 +18,6 @@ SCHEDULER_CONFIG = {
     # TOTAL_LEVEL: 3 -> there would be 3 staging queue
     "TOTAL_LEVEL": os.environ.get("TOTAL_LEVEL", 3),
     "LEVEL_LIMIT": map(int, os.environ.get("LEVEL_LIMIT", "600,1200").split(",")),
-    "RENEW_BEFORE_INSERT": bool(os.environ.get("RENEW_BEFORE_INSERT", 1)),
+    "IS_RENEW_BEFORE_INSERT": bool(os.environ.get("IS_RENEW_BEFORE_INSERT", 1)),
+    "JOB_SORT_KEY": os.environ.get("JOB_SORT_KEY", "schedule_time"),
 }

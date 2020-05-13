@@ -2,6 +2,7 @@
 Single Job Module
 Author: Po-Chun, Lu
 """
+from typing import Dict, Any
 from datetime import datetime
 
 from config import DATE_FORMAT
@@ -19,7 +20,7 @@ class Job:
         self.job_params = job_msg.msg_value["job_parameters"]
 
         job_config = job_msg.msg_value["job_config"]
-        self.job_config = {
+        self.time_attr: Dict[str, Any] = {
             "deadline": datetime.strptime(job_config["deadline"], DATE_FORMAT),
             "request_time": datetime.strptime(job_config["request_time"], DATE_FORMAT),
         }
@@ -32,10 +33,10 @@ class Job:
         }
 
         # for inner scheduling sorting
-        self.schedule_time = (
-            self.job_config["deadline"] - self.job_config["request_time"]
+        self.time_attr["schedule_time"] = (
+            self.time_attr["deadline"] - self.time_attr["request_time"]
         ).seconds
-        self.sort_key = getattr(self, sort_key)
+        self.sort_key = self.time_attr[sort_key]
 
     def __lt__(self, other) -> None:
         """ For sorting usage
@@ -45,8 +46,13 @@ class Job:
     def __str__(self):
         return ",".join((self.job_id, self.job_type, str(self.sort_key)))
 
+    def _renew_schedule_time(self) -> None:
+        self.time_attr["schedule_time"] = (
+            self.time_attr["deadline"] - datetime.now()
+        ).seconds
+
     def renew_priority(self) -> object:
         """ When a new job coming, we need to recompute the scheduling time before insert the new job into staging list
         """
-        self.schedule_time = (self.job_config["deadline"] - datetime.now()).seconds
+        self._renew_schedule_time()
         return self

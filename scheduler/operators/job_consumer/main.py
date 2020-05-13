@@ -40,7 +40,7 @@ class JobConsumer:
     def _consume_job(self, job: Job) -> None:
         job_level = self._extract_job_level(job)
 
-        if SCHEDULER_CONFIG["RENEW_BEFORE_INSERT"]:
+        if SCHEDULER_CONFIG["IS_RENEW_BEFORE_INSERT"]:
             self.stage_list[job_level].renew_jobs_priority()
 
         self.stage_list[job_level].insert(job)
@@ -51,4 +51,4 @@ class JobConsumer:
         Arguments:
             msg {namedtuple} -- msg retrieve from kafka consumer
         """
-        self._consume_job(Job(msg))
+        self._consume_job(Job(job_msg=msg, sort_key=SCHEDULER_CONFIG["JOB_SORT_KEY"]))
