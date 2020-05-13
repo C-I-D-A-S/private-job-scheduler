@@ -25,8 +25,8 @@ example
 ```lan=json
 {
 
-    'path': 'real-demand',
     'username': 'ncku_r',
+    'job_type': 'real-demand',
     'job_id': '1b16f76f-4bf0-44ew-9140-4a91c2e4e3ab',
     'job_config': {
         'request_time': '2019-12-29 14:00:00'
