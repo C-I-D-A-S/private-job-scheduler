@@ -58,4 +58,5 @@ class Job:
         return self
 
     def get_job_compute_requirement(self) -> None:
-        pass
+        """ deside the job computing resource, it would be submit to spark
+        """

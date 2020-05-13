@@ -29,7 +29,7 @@ class MainProcess:
                     f"Get MSG \n - Topic: {msg.topic}, Key: {msg.msg_key}, Value: {msg.msg_value}"
                 )
 
-                self.operator.process_msg(msg)
+                self.operator.consume_msg(msg)
 
     def run(self) -> None:
         """ start msg queue consumer and consume msgs
