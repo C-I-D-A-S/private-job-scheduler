@@ -5,7 +5,7 @@ Author: Po-Chun, Lu
 from typing import List
 import heapq
 
-from operators.job_consumer.base_job import Job
+from operators.job_consumer.resources.base_job import Job
 
 
 class StagingList:

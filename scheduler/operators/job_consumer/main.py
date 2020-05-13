@@ -5,8 +5,8 @@ Author: Po-Chun, Lu
 
 from config import SCHEDULER_CONFIG
 
-from operators.job_consumer.base_queue import StagingList
-from operators.job_consumer.base_job import Job
+from operators.job_consumer.resources.base_queue import StagingList
+from operators.job_consumer.resources.base_job import Job
 
 
 class JobConsumer:
@@ -22,7 +22,7 @@ class JobConsumer:
         self.stage_list = [StagingList(level) for level in range(self.total_level)]
 
     def _extract_job_level(self, job: Job) -> int:
-        """check the importance level (priority) of this job
+        """ Check the importance level (priority) of this job
             e.g. level_limit = (600,1200) and job_sort_key = 100, then job_level is 0
         Arguments:
             job {Job} -- Data Analysis Job
@@ -46,7 +46,7 @@ class JobConsumer:
         self.stage_list[job_level].insert(job)
 
     def process_msg(self, msg) -> None:
-        """A common method for handling msg, used for Polymorphism
+        """ A common method for handling msg, used for Polymorphism
 
         Arguments:
             msg {namedtuple} -- msg retrieve from kafka consumer

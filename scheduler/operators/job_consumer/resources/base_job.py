@@ -56,3 +56,6 @@ class Job:
         """
         self._renew_schedule_time()
         return self
+
+    def get_job_compute_requirement(self) -> None:
+        pass
