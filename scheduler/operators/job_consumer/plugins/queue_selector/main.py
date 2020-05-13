@@ -6,7 +6,7 @@ import abc
 import random
 
 from config import QUEUE_SELECTION_CONFIG
-from operators.job_consumer.resources.base_queue import StagingList
+from operators.job_consumer.resources import STAGING_LIST
 
 
 class BaseQueueSelector:
@@ -16,7 +16,7 @@ class BaseQueueSelector:
     # pylint: disable=W0613
     @classmethod
     @abc.abstractclassmethod
-    def select_queue(cls, stage_lists) -> StagingList:
+    def select_queue(cls, stage_lists) -> STAGING_LIST:
         """ common method of queue selector
         """
         return NotImplemented
@@ -54,7 +54,7 @@ class EnvWeightRandomSelect(BaseQueueSelector):
         return queue_level
 
     @classmethod
-    def select_queue(cls, stage_lists) -> StagingList:
+    def select_queue(cls, stage_lists) -> STAGING_LIST:
         queue_level = cls._get_queue_level()
         return stage_lists[queue_level]
 

@@ -5,9 +5,8 @@ Author: Po-Chun, Lu
 
 from config import SCHEDULER_CONFIG
 
-from operators.job_consumer.resources.base_queue import StagingList
+from operators.job_consumer.resources import STAGING_LIST
 from operators.job_consumer.resources.base_job import Job
-
 from operators.job_consumer.plugins import QUEUE_SELECTOR
 
 
@@ -21,7 +20,7 @@ class JobConsumer:
         self.level_limit = SCHEDULER_CONFIG["LEVEL_LIMIT"]
 
         # init all staging queue
-        self.stage_lists = [StagingList(level) for level in range(self.total_level)]
+        self.stage_lists = [STAGING_LIST(level) for level in range(self.total_level)]
 
     def _extract_job_level(self, job: Job) -> int:
         """ Check the importance level (priority) of this job
