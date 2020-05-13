@@ -18,6 +18,8 @@ class StagingList:
             level {int} -- importance of this list
         """
         self.level = level
+
+        # for job storaging
         self.heap: List[Job] = []
 
     def insert(self, job: Job) -> None:
