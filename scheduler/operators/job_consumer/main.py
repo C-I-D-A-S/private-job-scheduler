@@ -5,8 +5,8 @@ Author: Po-Chun, Lu
 
 from config import SCHEDULER_CONFIG
 
-from operators.job_consumer.resources import STAGING_LIST
 from operators.job_consumer.resources.base_job import Job
+from operators.job_consumer.resources import STAGING_LIST
 from operators.job_consumer.plugins import QUEUE_SELECTOR
 
 
@@ -62,3 +62,15 @@ class JobConsumer:
         """
         next_queue = QUEUE_SELECTOR.select_queue(self.stage_lists)
         return next_queue.pop()
+
+    def reallocate(self) -> None:
+        """ move job from low level stage queue to high level stage queue
+        """
+        for level, stage_list in enumerate(self.stage_lists):
+            self.stage_lists[level].renew_jobs_priority()
+
+            if level != 0:
+                # Check whether the real level of a job is changed
+                while (level) > self._extract_job_level(stage_list[0]):
+                    job = stage_list.pop()
+                    self.stage_lists[level].insert(job)
