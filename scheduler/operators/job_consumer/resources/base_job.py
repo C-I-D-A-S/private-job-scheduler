@@ -26,11 +26,7 @@ class Job:
         }
 
         # job resource requirement for executor
-        self.requirements = {
-            "require_cpu": None,
-            "require_mem": None,
-            "computing_time": None,
-        }
+        self.resources = {"cpu": None, "mem": None, "computing_time": None}
 
         # for inner scheduling sorting
         self.time_attr["schedule_time"] = (

@@ -7,6 +7,7 @@ from loguru import logger
 
 from connector.msg_queue.kafka import KafkaConsumer
 from operators.job_consumer.main import JobConsumer
+from operators.job_monitor.main import JobMonitor
 
 
 class MainProcess:
@@ -17,8 +18,9 @@ class MainProcess:
 
         # for getting msg
         self.consumer = KafkaConsumer()
+
         # for processing msg
-        self.operator = JobConsumer()
+        self.operator = JobConsumer(JobMonitor())
 
     def _handle_msgs(self) -> None:
         while True:

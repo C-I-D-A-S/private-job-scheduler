@@ -1,6 +1,7 @@
-""" collection of queue selectors
-    When spark executor is free, queue selector would pick a queue which is the top priority
-
+"""
+Collection of queue selectors
+When spark executor is free, queue selector would pick a queue which is the top priority
+Author: Po-Chun, Lu
 """
 import abc
 import random
@@ -10,7 +11,7 @@ from operators.job_consumer.resources import STAGING_LIST
 
 
 class BaseQueueSelector:
-    """ For Selector Polymorphism
+    """ For Queue Selector Polymorphism
     """
 
     # pylint: disable=W0613
@@ -61,7 +62,7 @@ class EnvWeightRandomSelect(BaseQueueSelector):
 
 def get_queue_selector():
     """ Organize the selectors
-        select a queue selector based o .env
+        select a queue selector based on .env
     """
     selector_map = {"env_weight_random_select": EnvWeightRandomSelect}
 

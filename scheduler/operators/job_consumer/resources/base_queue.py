@@ -42,6 +42,12 @@ class BaseStagingList:
         """
         self.job_list = list(map(lambda job: job.renew_priority(), self.job_list))
 
+    @abc.abstractmethod
+    def tolist(self) -> List[Job]:
+        """ return a priority sorted list for job selector iterating and pick a valid job
+        """
+        return self.job_list
+
 
 class HeapStagingList(BaseStagingList):
     """ Staging List Based on Heap
@@ -61,6 +67,9 @@ class HeapStagingList(BaseStagingList):
         """ use heapsort for staging list sorting
         """
         heapq.heapify(self.job_list)
+
+    def tolist(self) -> List[Job]:
+        return sorted(self.job_list)
 
 
 def get_staging_list():
