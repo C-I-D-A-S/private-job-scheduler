@@ -3,12 +3,17 @@ Entry Module for handling coming jobs
 Author: Po-Chun, Lu
 """
 from typing import Tuple
+import json
 
-from config import KAFKA_TOPIC_CONFIG, SCHEDULER_CONFIG
+from loguru import logger
+
+from config import KAFKA_TOPIC_CONFIG, SCHEDULER_CONFIG, AIRFLOW_CONFIG
 from operators.job_monitor.main import JobMonitor
 from operators.job_consumer.resources.base_job import Job
 from operators.job_consumer.resources import STAGING_LIST
 from operators.job_consumer.plugins import QUEUE_SELECTOR, JOB_SELECTOR
+
+from utils.common import send_post_request
 
 
 class JobConsumer:
@@ -56,6 +61,18 @@ class JobConsumer:
 
         self.stage_lists[job_level].insert(job)
 
+    def reallocate(self) -> None:
+        """ move job from low level stage queue to high level stage queue
+        """
+        for level, stage_list in enumerate(self.stage_lists):
+            self.stage_lists[level].renew_jobs_priority()
+
+            if level != 0:
+                # Check whether the real level of a job is changed
+                while (level) > self._extract_job_level(stage_list[0]):
+                    job = stage_list.pop()
+                    self.stage_lists[level].insert(job)
+
     def _pick_next_job(self) -> Job:
         """ When spark executor is free, it would pick a job which is the top priority of computing
 
@@ -64,13 +81,34 @@ class JobConsumer:
         """
         system_resources = self.job_monitor.fetch_current_system_resources_from_api()
         next_queue = QUEUE_SELECTOR.select_queue(self.stage_lists)
+        logger.info(
+            f"Next Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
+        )
 
         return JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
 
-    def _send_job_to_airflow(self):
-        # TODO: implement send to airflow
+    def _send_job_to_airflow(self) -> None:
         next_job = self._pick_next_job()
-        return next_job
+
+        if not next_job:
+            logger.info("No staging job in all queues")
+            return
+
+        send_post_request(
+            url=f'{AIRFLOW_CONFIG["URL"]}',
+            headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
+            data=json.dumps(
+                {
+                    "job_id": next_job.job_id,
+                    "job_type": next_job.job_type,
+                    "job_params": next_job.job_params,
+                    "time_attr": list(map(str, next_job.time_attr)),
+                    "resources": next_job.resources,
+                }
+            ),
+        )
+
+        # TODO: update system resources
 
     def consume_msg(self, msg) -> None:
         """ A common method for handling msg, used for Polymorphism
@@ -83,17 +121,5 @@ class JobConsumer:
             self._consume_job(
                 Job(job_msg=msg, sort_key=SCHEDULER_CONFIG["JOB_SORT_KEY"])
             )
-        elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_NEW_JOB_NOTIFY"]:
+        elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_JOB_COMPLETE_NOTIFY"]:
             self._send_job_to_airflow()
-
-    def reallocate(self) -> None:
-        """ move job from low level stage queue to high level stage queue
-        """
-        for level, stage_list in enumerate(self.stage_lists):
-            self.stage_lists[level].renew_jobs_priority()
-
-            if level != 0:
-                # Check whether the real level of a job is changed
-                while (level) > self._extract_job_level(stage_list[0]):
-                    job = stage_list.pop()
-                    self.stage_lists[level].insert(job)

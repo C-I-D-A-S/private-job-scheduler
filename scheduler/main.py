@@ -4,7 +4,6 @@ Author: Po-Chun, Lu
 """
 from loguru import logger
 
-
 from connector.msg_queue.kafka import KafkaConsumer
 from operators.job_consumer.main import JobConsumer
 from operators.job_monitor.main import JobMonitor
@@ -49,7 +48,7 @@ class MainProcess:
 def main():
     """ define main function for cython usage
     """
-    logger.info(f"ReStart Scheduler Process")
+    logger.info("ReStart Scheduler Process")
     app = MainProcess()
     app.run()
 

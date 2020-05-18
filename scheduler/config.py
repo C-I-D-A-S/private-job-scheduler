@@ -2,7 +2,11 @@
 """
 import os
 from typing import Tuple
+
+from dotenv import load_dotenv
 from mypy_extensions import TypedDict
+
+load_dotenv()
 
 KAFKA_TOPIC_CONFIG = {
     "TOPIC_NEW_JOB_NOTIFY": os.environ.get("TOPIC_NEW_JOB_NOTIFY", "new_job"),
@@ -20,6 +24,14 @@ CONFIG = {
         ],
     }
 }
+
+AIRFLOW_CONFIG = {
+    "URL": os.environ.get(
+        "AIRFLOW_URL",
+        "http://localhost:8080/api/experimental/dags/basic_test_job/dag_runs",
+    )
+}
+
 
 DATE_FORMAT = os.environ.get("DATE_FORMAT", "%Y-%m-%d %H:%M:%S")
 
@@ -52,8 +64,8 @@ QUEUE_SELECTION_CONFIG = {
         "QUEUE_SELECT_METHOD", "env_weight_random_select"
     ),
     "env_weight_random_select": {
-        "env_weights": map(
-            float, os.environ.get("SELECT_WEIGHT", "0.5,0.85").split(",")
+        "env_weights": list(
+            map(float, os.environ.get("SELECT_WEIGHT", "10,7,3").split(","))
         )
     },
 }

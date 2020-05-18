@@ -37,27 +37,39 @@ class EnvWeightRandomSelect(BaseQueueSelector):
     @staticmethod
     def _get_level_weight():
         # get weights from .env directly
-        return QUEUE_SELECTION_CONFIG["weight_random_select"]["env_weights"]
-
-    @staticmethod
-    def _get_random_number():
-        return random.random()
+        return QUEUE_SELECTION_CONFIG["env_weight_random_select"]["env_weights"]
 
     @classmethod
     def _get_queue_level(cls) -> int:
-        random_number = cls._get_random_number()
         random_weights = cls._get_level_weight()
+        return random.choices(range(len(random_weights)), weights=random_weights)[0]
 
-        for level, weight in enumerate(random_weights):
-            if random_number <= weight:
-                queue_level = level
+    @staticmethod
+    def _get_level_weight_with_length(stage_lists):
+        # prevent get a list with no job
+        env_weights = QUEUE_SELECTION_CONFIG["env_weight_random_select"]["env_weights"]
 
-        return queue_level
+        level_weights = [
+            (1 if len(stage_list.job_list) > 0 else 0) * env_weights[i]
+            for i, stage_list in enumerate(stage_lists)
+        ]
+        return level_weights
+
+    @classmethod
+    def _get_queue_level_with_length(cls, stage_lists) -> int:
+        random_weights = cls._get_level_weight_with_length(stage_lists)
+        return random.choices(range(len(random_weights)), weights=random_weights)[0]
 
     @classmethod
     def select_queue(cls, stage_lists) -> STAGING_LIST:
+
         queue_level = cls._get_queue_level()
-        return stage_lists[queue_level]
+
+        if len(stage_lists[queue_level].job_list) > 0:
+            return stage_lists[queue_level]
+
+        new_queue_level = cls._get_queue_level_with_length(stage_lists)
+        return stage_lists[new_queue_level]
 
 
 def get_queue_selector():
