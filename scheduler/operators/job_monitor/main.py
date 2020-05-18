@@ -25,7 +25,14 @@ class JobMonitor:
                                e.g. {"demand_forecasting": {"cpu": 1, "mem": 2, "computing_time": 3}}
         """
         # TODO: get min resources from db
-        return {"demand_forecasting_1hr": {"cpu": 1, "mem": 1, "computing_time": 5}}
+        return {
+            "demand_forecasting_1hr": {
+                "executors": 1,
+                "cpu": 1,
+                "mem": 1,
+                "computing_time": 5,
+            }
+        }
 
     def get_single_job_resources(self, job: Job) -> Optional[Dict[str, int]]:
         """[summary]
