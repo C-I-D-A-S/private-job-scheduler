@@ -1,4 +1,4 @@
-PKG = job-scheduler
+PKG = scheduler
 VERSION=$(shell awk '{match($$0,"__version__ = '\''(.*)'\''",a)}END{print a[1]}' $(PKG)/__version__.py)
 
 .PHONY: version init flake8 pylint lint test coverage clean
@@ -30,6 +30,8 @@ flake8:
 pylint:
 	pipenv run pylint scheduler --ignore=tests
 
+black:
+	pipenv run black $(PKG)
 
 test:
 	pipenv run pytest --pep8

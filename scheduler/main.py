@@ -4,9 +4,9 @@ Author: Po-Chun, Lu
 """
 from loguru import logger
 
-
 from connector.msg_queue.kafka import KafkaConsumer
 from operators.job_consumer.main import JobConsumer
+from operators.job_monitor.main import JobMonitor
 
 
 class MainProcess:
@@ -17,8 +17,9 @@ class MainProcess:
 
         # for getting msg
         self.consumer = KafkaConsumer()
+
         # for processing msg
-        self.operator = JobConsumer()
+        self.operator = JobConsumer(JobMonitor())
 
     def _handle_msgs(self) -> None:
         while True:
@@ -26,10 +27,10 @@ class MainProcess:
             for msg in msgs:
 
                 logger.info(
-                    f"Get MSG \n - Topic: {msg.topic}, Key: {msg.msg_key}, Value: {msg.msg_value}"
+                    f"Get MSG \n - Topic: {msg.topic}, \n - Key: {msg.msg_key}\n - Value: {msg.msg_value}"
                 )
 
-                self.operator.process_msg(msg)
+                self.operator.consume_msg(msg)
 
     def run(self) -> None:
         """ start msg queue consumer and consume msgs
@@ -47,7 +48,7 @@ class MainProcess:
 def main():
     """ define main function for cython usage
     """
-    logger.info(f"ReStart Scheduler Process")
+    logger.info("ReStart Scheduler Process")
     app = MainProcess()
     app.run()
 

@@ -12,7 +12,7 @@ from config import CONFIG
 
 
 def _error_cb(err):
-    print("Error: %s" % err)
+    logger.error("Error: %s" % err)
 
 
 def _decode_utf8(data):
