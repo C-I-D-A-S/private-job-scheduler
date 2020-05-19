@@ -99,11 +99,13 @@ class JobConsumer:
             headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
             data=json.dumps(
                 {
-                    "job_id": next_job.job_id,
-                    "job_type": next_job.job_type,
-                    "job_params": next_job.job_params,
-                    "time_attr": list(map(str, next_job.time_attr)),
-                    "resources": next_job.resources,
+                    "conf": {
+                        "job_id": next_job.job_id,
+                        "job_type": next_job.job_type,
+                        "job_params": next_job.job_params,
+                        "time_attr": list(map(str, next_job.time_attr)),
+                        "resources": next_job.resources,
+                    }
                 }
             ),
         )

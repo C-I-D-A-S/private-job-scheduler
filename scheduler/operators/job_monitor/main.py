@@ -27,7 +27,7 @@ class JobMonitor:
         # TODO: get min resources from db
         return {
             "demand_forecasting_1hr": {
-                "executors": 1,
+                "executors": 2,
                 "cpu": 1,
                 "mem": 1,
                 "computing_time": 5,

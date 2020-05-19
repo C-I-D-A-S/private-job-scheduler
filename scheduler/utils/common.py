@@ -25,7 +25,7 @@ def send_request(request_func):
             if status != 200:
                 logger.warning(f"REQ UNAVAILABLE: {status} - {url} - data: {data}")
             else:
-                logger.info(f"{status} - {url} - data: {data}")
+                logger.info(f"{status} - {url}\n - data: {data}\n - Res: {res.json()}")
             return res
 
         except requests.exceptions.Timeout as error:

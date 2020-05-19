@@ -27,7 +27,7 @@ class MainProcess:
             for msg in msgs:
 
                 logger.info(
-                    f"Get MSG \n - Topic: {msg.topic}, Key: {msg.msg_key}, Value: {msg.msg_value}"
+                    f"Get MSG \n - Topic: {msg.topic}, \n - Key: {msg.msg_key}\n - Value: {msg.msg_value}"
                 )
 
                 self.operator.consume_msg(msg)
