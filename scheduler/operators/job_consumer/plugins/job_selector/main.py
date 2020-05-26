@@ -51,8 +51,8 @@ class BasicJobSelector(BaseJobSelector):
 
         for job in stage_list:
             if (
-                job.resources["cpu"] < system_resources["max"]["cpu"]
-                and job.resources["mem"] < system_resources["max"]["mem"]
+                job.resources["cpu"] < system_resources["total"]["cpu"]
+                and job.resources["mem"] < system_resources["total"]["mem"]
             ):
                 return job
         # pylint: enable=C0330
