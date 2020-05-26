@@ -16,6 +16,10 @@ class JobMonitor:
     def __init__(self):
         self.jobs_resources = self._fetch_job_resources_from_api()
 
+        self.system_resources = {
+            "total": {"cpu": 32, "mem": 128},
+        }
+
     @staticmethod
     def _fetch_job_resources_from_api() -> Dict[str, Dict]:
         """ Get Job related resource requirements
@@ -27,7 +31,7 @@ class JobMonitor:
         # TODO: get min resources from db
         return {
             "demand_forecasting_1hr": {
-                "executors": 2,
+                "executors": 1,
                 "cpu": 1,
                 "mem": 1,
                 "computing_time": 5,
@@ -52,23 +56,24 @@ class JobMonitor:
             logger.error(f"Job Resources not exist: {err}")
             return None
 
-    @staticmethod
-    def fetch_current_system_resources_from_api() -> Dict[str, Dict]:
+    def fetch_current_system_resources_from_api(self) -> Dict[str, Dict]:
         """Get Spark System Valid Resources
 
         Returns:
             Dict[str, Dict] -- e.g. {
-                "total": {"cpu": 3, "mem": 6},
-                "max": {"cpu": 8, "mem": 16},
-                "0": {"cpu": 8, "mem": 16},
-                "1": {"cpu": 7, "mem": 16},
+                "total": {"cpu": 32, "mem": 128},
+                "max": {"cpu": 8, "mem": 32},
+                "0": {"cpu": 8, "mem": 32},
+                "1": {"cpu": 8, "mem": 32},
+                "2": {"cpu": 8, "mem": 32},
+                "3": {"cpu": 8, "mem": 32},
                 ...
             }
         """
 
         # TODO: get system resources from spark
-        return {
-            "max": {"cpu": 8, "mem": 16},
-            "0": {"cpu": 8, "mem": 16},
-            "1": {"cpu": 7, "mem": 12},
-        }
+        return self.system_resources
+
+    def update_current_system_resources(self, cpu, mem):
+        self.system_resources["total"]["cpu"] += cpu
+        self.system_resources["total"]["mem"] += mem
