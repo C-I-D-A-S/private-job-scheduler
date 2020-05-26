@@ -4,10 +4,11 @@ Author: Po-Chun, Lu
 """
 from typing import Tuple
 import json
+from datetime import datetime
 
 from loguru import logger
 
-from config import KAFKA_TOPIC_CONFIG, SCHEDULER_CONFIG, AIRFLOW_CONFIG
+from config import KAFKA_TOPIC_CONFIG, SCHEDULER_CONFIG, AIRFLOW_CONFIG, DATE_FORMAT
 from operators.job_monitor.main import JobMonitor
 from operators.job_consumer.resources.base_job import Job
 from operators.job_consumer.resources import STAGING_LIST
@@ -52,6 +53,11 @@ class JobConsumer:
         # setup job cpu & mem usage based on system status
         job.resources = self.job_monitor.get_single_job_resources(job)
 
+        # update scheduler time
+        num = job.job_params["num"]
+        job.resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
+        job.time_attr["schedule_time"] -= job.resources["computing_time"]
+
         if not job.resources:
             return
 
@@ -85,14 +91,17 @@ class JobConsumer:
             f"Next Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
         )
 
-        return JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
+        next_job = JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
+        if next_job:
+            next_queue.pop()
+        return next_job
 
-    def _send_job_to_airflow(self) -> None:
+    def _send_job_to_airflow(self) -> str:
         next_job = self._pick_next_job()
 
         if not next_job:
             logger.info("No staging job in all queues")
-            return
+            return "empty"
 
         send_post_request(
             url=f'{AIRFLOW_CONFIG["URL"]}',
@@ -102,15 +111,30 @@ class JobConsumer:
                     "conf": {
                         "job_id": next_job.job_id,
                         "job_type": next_job.job_type,
-                        "job_params": next_job.job_params,
-                        "time_attr": list(map(str, next_job.time_attr)),
-                        "resources": next_job.resources,
+                        "job_params": json.dumps(next_job.job_params),
+                        # "time_attr": json.dumps(next_job.time_attr),
+                        "resources": json.dumps(next_job.resources),
+                        "num": next_job.job_params["num"],
+                        "request_time": datetime.strftime(
+                            next_job.time_attr["request_time"], DATE_FORMAT
+                        ),
+                        "deadline": datetime.strftime(
+                            next_job.time_attr["deadline"], DATE_FORMAT
+                        ),
+                        "executors": 1,
+                        "cpu": 1,
+                        "mem": 1,
+                        "computing_time": next_job.resources["computing_time"],
                     }
                 }
             ),
         )
 
-        # TODO: update system resources
+        self.job_monitor.update_current_system_resources(
+            -next_job.resources["cpu"], -next_job.resources["mem"]
+        )
+
+        return ""
 
     def consume_msg(self, msg) -> None:
         """ A common method for handling msg, used for Polymorphism
@@ -123,5 +147,14 @@ class JobConsumer:
             self._consume_job(
                 Job(job_msg=msg, sort_key=SCHEDULER_CONFIG["JOB_SORT_KEY"])
             )
+
+            session = ""
+            while (
+                self.job_monitor.system_resources["total"]["cpu"] > 1
+                and session != "empty"
+            ):
+                session = self._send_job_to_airflow()
+
         elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_JOB_COMPLETE_NOTIFY"]:
+            self.job_monitor.update_current_system_resources(1, 1)
             self._send_job_to_airflow()

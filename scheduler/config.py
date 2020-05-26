@@ -33,7 +33,7 @@ AIRFLOW_CONFIG = {
 }
 
 
-DATE_FORMAT = os.environ.get("DATE_FORMAT", "%Y-%m-%d %H:%M:%S")
+DATE_FORMAT = os.environ.get("DATE_FORMAT", "%Y-%m-%dT%H:%M:%S")
 
 TYPE_SCHEDULER_CONFIG = TypedDict(
     "TYPE_SCHEDULER_CONFIG",
