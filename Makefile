@@ -33,6 +33,9 @@ pylint:
 black:
 	pipenv run black $(PKG)
 
+mypy:
+	pipenv run mypy $(PKG)
+
 test:
 	pipenv run pytest --pep8
 
