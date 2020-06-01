@@ -94,7 +94,7 @@ class JobConsumer:
         system_resources = self.job_monitor.fetch_current_system_resources_from_api()
         next_queue = QUEUE_SELECTOR.select_queue(self.stage_lists)
         logger.info(
-            f"Next Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
+            f"Current Ready Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
         )
 
         next_job = JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
@@ -112,7 +112,7 @@ class JobConsumer:
                         "job_id": next_job.job_id,
                         "job_type": next_job.job_type,
                         "job_params": json.dumps(next_job.job_params),
-                        # "job_times": json.dumps(next_job.job_times),
+                        "job_times": json.dumps(next_job.job_times),
                         "resources": json.dumps(next_job.job_resources),
                         "num": next_job.job_params["num"],
                         "request_time": datetime.strftime(
@@ -155,9 +155,17 @@ class JobConsumer:
         next_job = self._pick_next_job()
 
         if not next_job:
-            logger.info("No staging job in all queues")
+            logger.info("No staging or valid job in all queues")
+            for queue in self.stage_lists:
+                logger.info(
+                    f"Queue Level: {queue.level}, Job Num: {len(queue.job_list)}"
+                )
+
             return "empty"
 
+        logger.info(
+            f"\nResources: \n{next_job.job_resources}, \n Time: \n{next_job.job_times}"
+        )
         if trigger_type == "api":
             self._send_job_to_job_trigger(next_job)
         else:
@@ -183,10 +191,15 @@ class JobConsumer:
 
             session = ""
             while (
-                self.job_monitor.system_resources["total"]["cpu"] > 1
+                self.job_monitor.system_resources["total"]["cpu"] >= 1
                 and session != "empty"
             ):
                 session = self._send_job_to_trigger()
+
+            if self.job_monitor.system_resources["total"]["cpu"] < 1:
+                logger.warning(
+                    f"RESOURCE FULL USE: {self.job_monitor.system_resources}"
+                )
 
         elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_JOB_COMPLETE_NOTIFY"]:
             self.job_monitor.update_current_system_resources(1, 1)

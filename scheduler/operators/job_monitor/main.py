@@ -19,6 +19,7 @@ class JobMonitor:
         self.system_resources = {
             "total": {"cpu": 32, "mem": 128},
         }
+        logger.info(f"SYSTEM RESOURCE: {self.system_resources}")
 
     @staticmethod
     def _fetch_job_resources_from_api() -> Dict[str, Dict]:
