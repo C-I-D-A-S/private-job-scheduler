@@ -6,6 +6,7 @@ from typing import Dict, Optional
 
 from loguru import logger
 
+from config import SYSTEM_CONFIG
 from operators.job_consumer.resources.base_job import Job
 
 
@@ -17,7 +18,10 @@ class JobMonitor:
         self.jobs_resources = self._fetch_job_resources_from_api()
 
         self.system_resources = {
-            "total": {"cpu": 32, "mem": 128},
+            "total": {
+                "cpu": SYSTEM_CONFIG["SYSTEM_CPU"],
+                "mem": SYSTEM_CONFIG["SYSTEM_MEM"],
+            },
         }
         logger.info(f"SYSTEM RESOURCE: {self.system_resources}")
 
@@ -78,3 +82,4 @@ class JobMonitor:
     def update_current_system_resources(self, cpu, mem):
         self.system_resources["total"]["cpu"] += cpu
         self.system_resources["total"]["mem"] += mem
+        logger.info(f"SYSTEM RESOURCE: {self.system_resources}")

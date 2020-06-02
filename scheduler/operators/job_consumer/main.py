@@ -59,9 +59,15 @@ class JobConsumer:
         # setup job cpu & mem usage based on system status
         job.job_resources = self.job_monitor.get_single_job_resources(job)
 
-        # update scheduler time
-        num = job.job_params["num"]
-        job.job_resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
+        # TODO: Remove for Prod
+        if job.job_params["resources"]:
+            # get resource from user
+            job.job_resources = job.job_params["resources"]
+        else:
+            # update scheduler time by house num
+            num = job.job_params["num"]
+            job.job_resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
+
         job.job_times["schedule_time"] -= job.job_resources["computing_time"]
 
         if not job.job_resources:
@@ -202,5 +208,7 @@ class JobConsumer:
                 )
 
         elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_JOB_COMPLETE_NOTIFY"]:
-            self.job_monitor.update_current_system_resources(1, 1)
+            self.job_monitor.update_current_system_resources(
+                msg.msg_value["cpu"], msg.msg_value["mem"]
+            )
             self._send_job_to_trigger()

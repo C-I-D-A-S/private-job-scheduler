@@ -8,6 +8,11 @@ from mypy_extensions import TypedDict
 
 load_dotenv()
 
+SYSTEM_CONFIG = {
+    "SYSTEM_CPU": int(os.environ.get("SYSTEM_CPU", 1)),
+    "SYSTEM_MEM": int(os.environ.get("SYSTEM_MEM", 1)),
+}
+
 KAFKA_TOPIC_CONFIG = {
     "TOPIC_NEW_JOB_NOTIFY": os.environ.get("TOPIC_NEW_JOB_NOTIFY", "new_job"),
     "TOPIC_JOB_COMPLETE_NOTIFY": os.environ.get("JOB_COMPLETE_NOTIFY", "job_finish"),
