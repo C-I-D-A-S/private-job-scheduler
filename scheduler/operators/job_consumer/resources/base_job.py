@@ -20,13 +20,13 @@ class Job:
         self.job_params = job_msg.msg_value["job_parameters"]
 
         job_config = job_msg.msg_value["job_config"]
-        self.job_times: Dict[str, Any] = {
+        self.time_attr: Dict[str, Any] = {
             "deadline": datetime.strptime(job_config["deadline"], DATE_FORMAT),
             "request_time": datetime.strptime(job_config["request_time"], DATE_FORMAT),
         }
 
         # job resource requirement for executor
-        self.job_resources = {
+        self.resources = {
             "executors": None,
             "cpu": None,
             "mem": None,
@@ -34,10 +34,10 @@ class Job:
         }
 
         # for inner scheduling sorting
-        self.job_times["schedule_time"] = (
-            self.job_times["deadline"] - self.job_times["request_time"]
+        self.time_attr["schedule_time"] = (
+            self.time_attr["deadline"] - self.time_attr["request_time"]
         ).seconds
-        self.sort_key = self.job_times[sort_key]
+        self.sort_key = self.time_attr[sort_key]
 
     def __lt__(self, other) -> None:
         """ For sorting usage
@@ -48,8 +48,8 @@ class Job:
         return ",".join((self.job_id, self.job_type, str(self.sort_key)))
 
     def _renew_schedule_time(self) -> None:
-        self.job_times["schedule_time"] = (
-            self.job_times["deadline"] - datetime.now()
+        self.time_attr["schedule_time"] = (
+            self.time_attr["deadline"] - datetime.now()
         ).seconds
 
     def renew_priority(self) -> object:

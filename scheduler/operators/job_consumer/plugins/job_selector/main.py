@@ -6,8 +6,6 @@ Author: Po-Chun, Lu
 import abc
 from typing import Dict, List, Optional
 
-from loguru import logger
-
 from config import JOB_SELECTION_CONFIG
 from operators.job_consumer.resources.base_job import Job
 
@@ -53,17 +51,13 @@ class BasicJobSelector(BaseJobSelector):
 
         for job in stage_list:
             if (
-                job.job_resources["cpu"] <= system_resources["total"]["cpu"]
-                and job.job_resources["mem"] <= system_resources["total"]["mem"]
+                job.resources["cpu"] < system_resources["total"]["cpu"]
+                and job.resources["mem"] < system_resources["total"]["mem"]
             ):
-                next_job = job
-                break
-        else:
-            logger.warning(f"NO VALID JOB - SYSTEM: {system_resources}")
-            next_job = None
+                return job
         # pylint: enable=C0330
 
-        return next_job
+        return stage_list[0]
 
 
 def get_job_selector():
