@@ -33,9 +33,7 @@ AIRFLOW_CONFIG = {
 }
 
 JOB_TRIGGER_CONFIG = {
-    "URL": os.environ.get(
-        "JOB_TRIGGER_URL", "http://140.116.247.116:45000/trigger/spark",
-    )
+    "URL": os.environ.get("JOB_TRIGGER_URL", "http://localhost:5000/trigger/spark",)
 }
 
 DATE_FORMAT = os.environ.get("DATE_FORMAT", "%Y-%m-%dT%H:%M:%S")
