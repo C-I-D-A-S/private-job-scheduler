@@ -8,7 +8,13 @@ from datetime import datetime
 
 from loguru import logger
 
-from config import KAFKA_TOPIC_CONFIG, SCHEDULER_CONFIG, AIRFLOW_CONFIG, DATE_FORMAT
+from config import (
+    KAFKA_TOPIC_CONFIG,
+    SCHEDULER_CONFIG,
+    AIRFLOW_CONFIG,
+    JOB_TRIGGER_CONFIG,
+    DATE_FORMAT,
+)
 from operators.job_monitor.main import JobMonitor
 from operators.job_consumer.resources.base_job import Job
 from operators.job_consumer.resources import STAGING_LIST
@@ -51,14 +57,14 @@ class JobConsumer:
 
     def _consume_job(self, job: Job) -> None:
         # setup job cpu & mem usage based on system status
-        job.resources = self.job_monitor.get_single_job_resources(job)
+        job.job_resources = self.job_monitor.get_single_job_resources(job)
 
         # update scheduler time
         num = job.job_params["num"]
-        job.resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
-        job.time_attr["schedule_time"] -= job.resources["computing_time"]
+        job.job_resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
+        job.job_times["schedule_time"] -= job.job_resources["computing_time"]
 
-        if not job.resources:
+        if not job.job_resources:
             return
 
         job_level = self._extract_job_level(job)
@@ -88,7 +94,7 @@ class JobConsumer:
         system_resources = self.job_monitor.fetch_current_system_resources_from_api()
         next_queue = QUEUE_SELECTOR.select_queue(self.stage_lists)
         logger.info(
-            f"Next Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
+            f"Current Ready Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
         )
 
         next_job = JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
@@ -96,13 +102,7 @@ class JobConsumer:
             next_queue.pop()
         return next_job
 
-    def _send_job_to_airflow(self) -> str:
-        next_job = self._pick_next_job()
-
-        if not next_job:
-            logger.info("No staging job in all queues")
-            return "empty"
-
+    def _send_job_to_airflow(self, next_job) -> None:
         send_post_request(
             url=f'{AIRFLOW_CONFIG["URL"]}',
             headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
@@ -112,26 +112,67 @@ class JobConsumer:
                         "job_id": next_job.job_id,
                         "job_type": next_job.job_type,
                         "job_params": json.dumps(next_job.job_params),
-                        # "time_attr": json.dumps(next_job.time_attr),
-                        "resources": json.dumps(next_job.resources),
+                        "job_times": json.dumps(next_job.job_times),
+                        "resources": json.dumps(next_job.job_resources),
                         "num": next_job.job_params["num"],
                         "request_time": datetime.strftime(
-                            next_job.time_attr["request_time"], DATE_FORMAT
+                            next_job.job_times["request_time"], DATE_FORMAT
                         ),
                         "deadline": datetime.strftime(
-                            next_job.time_attr["deadline"], DATE_FORMAT
+                            next_job.job_times["deadline"], DATE_FORMAT
                         ),
                         "executors": 1,
                         "cpu": 1,
                         "mem": 1,
-                        "computing_time": next_job.resources["computing_time"],
+                        "computing_time": next_job.job_resources["computing_time"],
                     }
                 }
             ),
         )
 
+    def _send_job_to_job_trigger(self, next_job) -> None:
+        job_times = {
+            key: datetime.strftime(next_job.job_times[key], DATE_FORMAT)
+            if key != "schedule_time"
+            else next_job.job_times[key]
+            for key in next_job.job_times
+        }
+        send_post_request(
+            url=f'{JOB_TRIGGER_CONFIG["URL"]}',
+            headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
+            data=json.dumps(
+                {
+                    "job_id": next_job.job_id,
+                    "job_type": next_job.job_type,
+                    "job_params": next_job.job_params,
+                    "job_times": job_times,
+                    "job_resources": next_job.job_resources,
+                }
+            ),
+        )
+
+    def _send_job_to_trigger(self, trigger_type: str = "api"):
+        next_job = self._pick_next_job()
+
+        if not next_job:
+            logger.info("No staging or valid job in all queues")
+            for queue in self.stage_lists:
+                logger.info(
+                    f"Queue Level: {queue.level}, Job Num: {len(queue.job_list)}"
+                )
+
+            return "empty"
+
+        logger.info(
+            f"\nResources: \n{next_job.job_resources}, \n Time: \n{next_job.job_times}"
+        )
+        if trigger_type == "api":
+            self._send_job_to_job_trigger(next_job)
+        else:
+            self._send_job_to_airflow(next_job)
+
         self.job_monitor.update_current_system_resources(
-            -next_job.resources["cpu"], -next_job.resources["mem"]
+            -next_job.job_resources["cpu"], -next_job.job_resources["mem"]
         )
 
         return ""
@@ -150,11 +191,16 @@ class JobConsumer:
 
             session = ""
             while (
-                self.job_monitor.system_resources["total"]["cpu"] > 1
+                self.job_monitor.system_resources["total"]["cpu"] >= 1
                 and session != "empty"
             ):
-                session = self._send_job_to_airflow()
+                session = self._send_job_to_trigger()
+
+            if self.job_monitor.system_resources["total"]["cpu"] < 1:
+                logger.warning(
+                    f"RESOURCE FULL USE: {self.job_monitor.system_resources}"
+                )
 
         elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_JOB_COMPLETE_NOTIFY"]:
             self.job_monitor.update_current_system_resources(1, 1)
-            self._send_job_to_airflow()
+            self._send_job_to_trigger()
