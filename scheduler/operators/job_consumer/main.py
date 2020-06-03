@@ -14,6 +14,7 @@ from config import (
     AIRFLOW_CONFIG,
     JOB_TRIGGER_CONFIG,
     DATE_FORMAT,
+    get_exp_config,
 )
 from operators.job_monitor.main import JobMonitor
 from operators.job_consumer.resources.base_job import Job
@@ -150,7 +151,7 @@ class JobConsumer:
                 {
                     "job_id": next_job.job_id,
                     "job_type": next_job.job_type,
-                    "job_params": next_job.job_params,
+                    "job_params": {**next_job.job_params, **get_exp_config()},
                     "job_times": job_times,
                     "job_resources": next_job.job_resources,
                 }

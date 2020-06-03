@@ -88,3 +88,15 @@ JOB_SELECTION_CONFIG = {
 }
 
 QUEUE_SCHEDULE_CONFIG = {"STAGE_QUEUE": os.environ.get("STAGE_QUEUE", "heap")}
+
+
+def get_exp_config():
+    """ for exp analysis table """
+    return {
+        "method": {
+            "SCHEDULER_CONFIG": SCHEDULER_CONFIG,
+            "QUEUE_SELECT_METHOD": QUEUE_SELECTION_CONFIG["QUEUE_SELECT_METHOD"],
+            "QUEUE_SCHEDULE_CONFIG": QUEUE_SCHEDULE_CONFIG,
+            "JOB_SELECTION_CONFIG": JOB_SELECTION_CONFIG,
+        }
+    }
