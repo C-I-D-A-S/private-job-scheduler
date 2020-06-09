@@ -3,7 +3,8 @@ Single Staging Queue Module
 Author: Po-Chun, Lu
 """
 import abc
-from typing import List
+from typing import List, Deque
+from collections import deque
 import heapq
 
 from config import QUEUE_SCHEDULE_CONFIG
@@ -23,7 +24,7 @@ class BaseStagingList:
         self.level = level
 
         # for job storaging
-        self.job_list: List[Job] = []
+        self.job_list: Deque[Job] = deque([])
 
     @abc.abstractmethod
     def insert(self, job: Job) -> None:
@@ -35,23 +36,33 @@ class BaseStagingList:
     def pop(self) -> Job:
         """ get the most urgent job for worker to operate
         """
-        return self.job_list.pop()
+        return self.job_list.popleft()
 
     def renew_jobs_priority(self) -> None:
         """ recompute the job priority since the scheduling time would change
         """
-        self.job_list = list(map(lambda job: job.renew_priority(), self.job_list))
+        self.job_list = deque(map(lambda job: job.renew_priority(), self.job_list))
 
     @abc.abstractmethod
-    def tolist(self) -> List[Job]:
+    def tolist(self) -> Deque[Job]:
         """ return a priority sorted list for job selector iterating and pick a valid job
         """
         return self.job_list
 
 
-class HeapStagingList(BaseStagingList):
+class HeapStagingList:
     """ Staging List Based on Heap
     """
+
+    def __init__(self, level: int) -> None:
+        """
+        Arguments:
+            level {int} -- importance of this list
+        """
+        self.level = level
+
+        # for job storaging
+        self.job_list: List[Job] = []
 
     def insert(self, job: Job) -> None:
         """ insert the latest job into this heap
@@ -67,6 +78,11 @@ class HeapStagingList(BaseStagingList):
         """ use heapsort for staging list sorting
         """
         heapq.heapify(self.job_list)
+
+    def renew_jobs_priority(self) -> None:
+        """ recompute the job priority since the scheduling time would change
+        """
+        self.job_list = list(map(lambda job: job.renew_priority(), self.job_list))
 
     def tolist(self) -> List[Job]:
         return sorted(self.job_list)
