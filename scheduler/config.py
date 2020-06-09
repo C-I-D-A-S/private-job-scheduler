@@ -3,6 +3,7 @@
 import os
 from typing import Tuple
 
+from loguru import logger
 from dotenv import load_dotenv
 from mypy_extensions import TypedDict
 
@@ -89,6 +90,15 @@ JOB_SELECTION_CONFIG = {
 
 QUEUE_SCHEDULE_CONFIG = {"STAGE_QUEUE": os.environ.get("STAGE_QUEUE", "heap")}
 
+EXP_ID = (
+    f"{os.environ.get('EXP_ID', '0.0.0')}"
+    + f"_c{SYSTEM_CONFIG['SYSTEM_CPU']}_m{SYSTEM_CONFIG['SYSTEM_MEM']}"
+    + f"_queueSelect-{QUEUE_SELECTION_CONFIG['QUEUE_SELECT_METHOD']}"
+    + f"_queue-{QUEUE_SCHEDULE_CONFIG['STAGE_QUEUE']}"
+)
+
+logger.info(EXP_ID)
+
 
 def get_exp_config():
     """ for exp analysis table """
@@ -98,5 +108,6 @@ def get_exp_config():
             "QUEUE_SELECT_METHOD": QUEUE_SELECTION_CONFIG["QUEUE_SELECT_METHOD"],
             "QUEUE_SCHEDULE_CONFIG": QUEUE_SCHEDULE_CONFIG,
             "JOB_SELECTION_CONFIG": JOB_SELECTION_CONFIG,
-        }
+        },
+        "exp_id": EXP_ID,
     }
