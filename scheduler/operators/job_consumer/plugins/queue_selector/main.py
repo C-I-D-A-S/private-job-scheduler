@@ -27,6 +27,20 @@ class BaseQueueSelector:
     # pylint: enable=W0613
 
 
+class TopLevelQueueSelector(BaseQueueSelector):
+    """ always choose L0, then L1, L2...
+    """
+
+    @classmethod
+    def select_queue(cls, stage_lists) -> STAGING_LIST:
+
+        for stage_list in stage_lists:
+            if len(stage_list.job_list) > 0:
+                return stage_list
+
+        return stage_lists[0]
+
+
 class EnvWeightRandomSelect(BaseQueueSelector):
     """ set level ranges and pick a random number to choose queue
         e.g.level weight = L1: 0~0.5, L2: 0.5~0.85, L3: 0.85 ~ 1,
@@ -162,6 +176,7 @@ def get_queue_selector():
         select a queue selector based on .env
     """
     selector_map = {
+        "top_level_select": TopLevelQueueSelector(),
         "env_weight_random_select": EnvWeightRandomSelect(),
         # "weight_random_select": WeightRandomSelect(),
         "env_zip_select": EnvZipSelect(),
