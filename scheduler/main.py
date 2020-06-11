@@ -27,7 +27,8 @@ class MainProcess:
             for msg in msgs:
 
                 logger.info(
-                    f"Get MSG \n - Topic: {msg.topic}, \n - Key: {msg.msg_key}\n - Value: {msg.msg_value}"
+                    f"{'='*60}\n\n"
+                    + f"Get MSG \n - Topic: {msg.topic}, \n - Key: {msg.msg_key}\n - Value: {msg.msg_value}\n"
                 )
 
                 self.operator.consume_msg(msg)
@@ -48,7 +49,7 @@ class MainProcess:
 def main():
     """ define main function for cython usage
     """
-    logger.info("ReStart Scheduler Process")
+    logger.warning("ReStart Scheduler Process")
     app = MainProcess()
     app.run()
 

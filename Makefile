@@ -25,7 +25,7 @@ init: clean
 lint: pylint flake8
 
 flake8:
-	pipenv run flake8 --max-line-length=120
+	pipenv run flake8 scheduler --max-line-length=120
 
 pylint:
 	pipenv run pylint scheduler --ignore=tests

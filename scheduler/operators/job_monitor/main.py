@@ -2,10 +2,11 @@
 Module for monitor system valid resources of spark and assign resources for jobs
 Author: Po-Chun, Lu
 """
-from typing import Dict, Optional
+from typing import Dict
 
 from loguru import logger
 
+from config import SYSTEM_CONFIG
 from operators.job_consumer.resources.base_job import Job
 
 
@@ -17,8 +18,12 @@ class JobMonitor:
         self.jobs_resources = self._fetch_job_resources_from_api()
 
         self.system_resources = {
-            "total": {"cpu": 32, "mem": 128},
+            "total": {
+                "cpu": SYSTEM_CONFIG["SYSTEM_CPU"],
+                "mem": SYSTEM_CONFIG["SYSTEM_MEM"],
+            },
         }
+        logger.info(f"TOTAL SYSTEM RESOURCE: {self.system_resources}")
 
     @staticmethod
     def _fetch_job_resources_from_api() -> Dict[str, Dict]:
@@ -38,7 +43,7 @@ class JobMonitor:
             }
         }
 
-    def get_single_job_resources(self, job: Job) -> Optional[Dict[str, int]]:
+    def get_single_job_resources(self, job: Job) -> Dict[str, int]:
         """[summary]
 
         Arguments:
@@ -54,7 +59,7 @@ class JobMonitor:
 
         except KeyError as err:
             logger.error(f"Job Resources not exist: {err}")
-            return None
+            raise ValueError
 
     def fetch_current_system_resources_from_api(self) -> Dict[str, Dict]:
         """Get Spark System Valid Resources
@@ -75,5 +80,12 @@ class JobMonitor:
         return self.system_resources
 
     def update_current_system_resources(self, cpu, mem):
+        """ increase system valid resource when a job complete
+
+        Args:
+            cpu (int): cpu usage of the latest finished job
+            mem (int): mem usage of the latest finished job
+        """
         self.system_resources["total"]["cpu"] += cpu
         self.system_resources["total"]["mem"] += mem
+        logger.info(f"Current System Resources: {self.system_resources}")

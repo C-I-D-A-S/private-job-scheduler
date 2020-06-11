@@ -1,12 +1,43 @@
 """ config for scheduler module
 """
+import sys
 import os
 from typing import Tuple
 
+from loguru import logger
 from dotenv import load_dotenv
 from mypy_extensions import TypedDict
 
+
+logger.remove()
+
+
+def formatter(record):
+    """ log text formatter
+        10: Debug, 20: INFO, 25: SUCCESS, 30: WARNING, 40: ERROR, 50: CRITICAL
+    """
+    time_str = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> | "
+    formate_map = {
+        10: "<blue><b>{level: <8}</b></> | - <blue><b>{message}</b></>\n",
+        20: "<b>{level: <8}</b> | - <b>{message}</b>\n",
+        25: "<green><b>{level: <8}</b></> | - <green><b>{message}</b></>\n",
+        30: "<yellow><b>{level: <8}</b></> | - <yellow><b>{message}</b></>\n",
+        40: "<red><b>{level: <8}</b></> | - <red><b>{message}</b></>\n",
+        50: "<bg red><w><b>{level: <8}</b></></> | - <bg red><w><b>{message}</b></></>\n",
+    }
+
+    return time_str + formate_map[record["level"].no]
+
+
+logger.add(sys.stderr, format=formatter)
+
+
 load_dotenv()
+
+SYSTEM_CONFIG = {
+    "SYSTEM_CPU": int(os.environ.get("SYSTEM_CPU", 1)),
+    "SYSTEM_MEM": int(os.environ.get("SYSTEM_MEM", 1)),
+}
 
 KAFKA_TOPIC_CONFIG = {
     "TOPIC_NEW_JOB_NOTIFY": os.environ.get("TOPIC_NEW_JOB_NOTIFY", "new_job"),
@@ -32,6 +63,10 @@ AIRFLOW_CONFIG = {
     )
 }
 
+JOB_TRIGGER_CONFIG = {
+    "URL": os.environ.get("JOB_TRIGGER_URL", "http://localhost:5000/trigger/spark"),
+    "METHOD": os.environ.get("JOB_TRIGGER_METHOD", "api"),
+}
 
 DATE_FORMAT = os.environ.get("DATE_FORMAT", "%Y-%m-%dT%H:%M:%S")
 
@@ -68,6 +103,11 @@ QUEUE_SELECTION_CONFIG = {
             map(float, os.environ.get("SELECT_WEIGHT", "10,7,3").split(","))
         )
     },
+    "env_zip_select": {
+        "env_orders": list(
+            map(float, os.environ.get("SELECT_ORDER", "3,2,1").split(","))
+        )
+    },
 }
 
 JOB_SELECTION_CONFIG = {
@@ -75,3 +115,25 @@ JOB_SELECTION_CONFIG = {
 }
 
 QUEUE_SCHEDULE_CONFIG = {"STAGE_QUEUE": os.environ.get("STAGE_QUEUE", "heap")}
+
+EXP_ID = (
+    f"{os.environ.get('EXP_ID', '0.0.0')}"
+    + f"_c{SYSTEM_CONFIG['SYSTEM_CPU']}_m{SYSTEM_CONFIG['SYSTEM_MEM']}"
+    + f"_queueSelect-{QUEUE_SELECTION_CONFIG['QUEUE_SELECT_METHOD']}"
+    + f"_queue-{QUEUE_SCHEDULE_CONFIG['STAGE_QUEUE']}"
+)
+
+logger.info(EXP_ID)
+
+
+def get_exp_config():
+    """ for exp analysis table """
+    return {
+        "method": {
+            "SCHEDULER_CONFIG": SCHEDULER_CONFIG,
+            "QUEUE_SELECT_METHOD": QUEUE_SELECTION_CONFIG["QUEUE_SELECT_METHOD"],
+            "QUEUE_SCHEDULE_CONFIG": QUEUE_SCHEDULE_CONFIG,
+            "JOB_SELECTION_CONFIG": JOB_SELECTION_CONFIG,
+        },
+        "exp_id": EXP_ID,
+    }

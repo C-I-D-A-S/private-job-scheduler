@@ -4,10 +4,14 @@ When spark executor is free, job selector would pick a job from a queue based on
 Author: Po-Chun, Lu
 """
 import abc
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from config import JOB_SELECTION_CONFIG
 from operators.job_consumer.resources.base_job import Job
+from operators.job_consumer.plugins.job_selector.exceptions import (
+    EmptyListException,
+    NoValidJobInListException,
+)
 
 
 class BaseJobSelector:
@@ -30,7 +34,7 @@ class BasicJobSelector(BaseJobSelector):
     """
 
     @classmethod
-    def select_job(cls, stage_list: List[Job], system_resources: Dict) -> Optional[Job]:
+    def select_job(cls, stage_list: List[Job], system_resources: Dict) -> Job:
         """ pick the next system avaliable job
 
         Arguments:
@@ -47,17 +51,20 @@ class BasicJobSelector(BaseJobSelector):
         """
         # pylint: disable=C0330
         if len(stage_list) == 0:
-            return None
+            raise EmptyListException
 
         for job in stage_list:
             if (
-                job.resources["cpu"] < system_resources["total"]["cpu"]
-                and job.resources["mem"] < system_resources["total"]["mem"]
+                job.job_resources["cpu"] <= system_resources["total"]["cpu"]
+                and job.job_resources["mem"] <= system_resources["total"]["mem"]
             ):
-                return job
+                next_job = job
+                break
+        else:
+            raise NoValidJobInListException(system_resources)
         # pylint: enable=C0330
 
-        return stage_list[0]
+        return next_job
 
 
 def get_job_selector():
