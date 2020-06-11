@@ -18,7 +18,7 @@ class BaseQueueSelector:
     """
 
     # pylint: disable=W0613
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def select_queue(self, stage_lists) -> STAGING_LIST:
         """ common method of queue selector
         """
@@ -55,7 +55,7 @@ class EnvWeightRandomSelect(BaseQueueSelector):
         return random.choices(range(len(random_weights)), weights=random_weights)[0]
 
     @staticmethod
-    def _get_level_weight():
+    def _get_level_weight() -> List[int]:
         # get weights from .env directly
         return QUEUE_SELECTION_CONFIG["env_weight_random_select"]["env_weights"]
 
@@ -64,15 +64,15 @@ class EnvWeightRandomSelect(BaseQueueSelector):
         random_weights = cls._get_level_weight()
         return cls._pick_item_with_weights(random_weights)
 
-    @staticmethod
-    def _get_level_weight_with_length(stage_lists) -> List[int]:
+    @classmethod
+    def _get_level_weight_with_length(cls, stage_lists) -> List[int]:
         """ get level weights with consideration of queue length
             e.g.    len of each queue: 3, 0, 2
                     weight of each queue: 0.5, 0.35, 0.15
                     final weights: 1*0.5, 0*0.35, 1*0.15
         """
         # prevent get a list with no job
-        env_weights = QUEUE_SELECTION_CONFIG["env_weight_random_select"]["env_weights"]
+        env_weights = cls._get_level_weight()
 
         level_weights = [
             (1 if len(stage_list.job_list) > 0 else 0) * env_weights[i]
@@ -98,6 +98,10 @@ class EnvWeightRandomSelect(BaseQueueSelector):
 
 
 class WeightRandomSelect(EnvWeightRandomSelect):
+    """ set level ranges and pick a random number to choose queue
+        level range based on queue states
+    """
+
     @staticmethod
     def _get_level_weight():
         # get weights from calculations
