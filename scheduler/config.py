@@ -1,11 +1,34 @@
 """ config for scheduler module
 """
+import sys
 import os
 from typing import Tuple
 
 from loguru import logger
 from dotenv import load_dotenv
 from mypy_extensions import TypedDict
+
+
+logger.remove()
+
+
+def formatter(record):
+    # 10: Debug, 20: INFO, 25: SUCCESS, 30: WARNING, 40: ERROR, 50: CRITICAL
+    time_str = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> | "
+    formate_map = {
+        10: "<blue><b>{level: <8}</b></> | - <blue><b>{message}</b></>\n",
+        20: "<b>{level: <8}</b> | - <b>{message}</b>\n",
+        25: "<green><b>{level: <8}</b></> | - <green><b>{message}</b></>\n",
+        30: "<yellow><b>{level: <8}</b></> | - <yellow><b>{message}</b></>\n",
+        40: "<red><b>{level: <8}</b></> | - <red><b>{message}</b></>\n",
+        50: "<bg red><w><b>{level: <8}</b></></> | - <bg red><w><b>{message}</b></></>\n",
+    }
+
+    return time_str + formate_map[record["level"].no]
+
+
+logger.add(sys.stderr, format=formatter)
+
 
 load_dotenv()
 
@@ -39,7 +62,8 @@ AIRFLOW_CONFIG = {
 }
 
 JOB_TRIGGER_CONFIG = {
-    "URL": os.environ.get("JOB_TRIGGER_URL", "http://localhost:5000/trigger/spark",)
+    "URL": os.environ.get("JOB_TRIGGER_URL", "http://localhost:5000/trigger/spark"),
+    "METHOD": os.environ.get("JOB_TRIGGER_METHOD", "api"),
 }
 
 DATE_FORMAT = os.environ.get("DATE_FORMAT", "%Y-%m-%dT%H:%M:%S")
