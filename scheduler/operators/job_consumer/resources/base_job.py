@@ -3,7 +3,7 @@ Single Job Module
 Author: Po-Chun, Lu
 """
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from config import DATE_FORMAT
 
@@ -49,7 +49,9 @@ class Job:
 
     def _renew_schedule_time(self) -> None:
         self.job_times["schedule_time"] = (
-            self.job_times["deadline"] - datetime.now()
+            self.job_times["deadline"]
+            - datetime.utcnow()
+            - timedelta(seconds=self.job_resources["computing_time"])
         ).seconds
 
     def renew_priority(self) -> object:
