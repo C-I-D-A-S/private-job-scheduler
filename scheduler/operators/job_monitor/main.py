@@ -23,7 +23,7 @@ class JobMonitor:
                 "mem": SYSTEM_CONFIG["SYSTEM_MEM"],
             },
         }
-        logger.info(f"SYSTEM RESOURCE: {self.system_resources}")
+        logger.info(f"TOTAL SYSTEM RESOURCE: {self.system_resources}")
 
     @staticmethod
     def _fetch_job_resources_from_api() -> Dict[str, Dict]:
@@ -82,4 +82,4 @@ class JobMonitor:
     def update_current_system_resources(self, cpu, mem):
         self.system_resources["total"]["cpu"] += cpu
         self.system_resources["total"]["mem"] += mem
-        logger.info(f"SYSTEM RESOURCE: {self.system_resources}")
+        logger.info(f"Current System Resources: {self.system_resources}")
