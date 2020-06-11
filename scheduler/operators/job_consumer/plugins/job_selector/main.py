@@ -6,10 +6,12 @@ Author: Po-Chun, Lu
 import abc
 from typing import Dict, List, Optional
 
-from loguru import logger
-
 from config import JOB_SELECTION_CONFIG
 from operators.job_consumer.resources.base_job import Job
+from operators.job_consumer.plugins.job_selector.exceptions import (
+    EmptyListException,
+    NoValidJobInListException,
+)
 
 
 class BaseJobSelector:
@@ -49,7 +51,7 @@ class BasicJobSelector(BaseJobSelector):
         """
         # pylint: disable=C0330
         if len(stage_list) == 0:
-            return None
+            raise EmptyListException
 
         for job in stage_list:
             if (
@@ -59,8 +61,7 @@ class BasicJobSelector(BaseJobSelector):
                 next_job = job
                 break
         else:
-            logger.warning(f"NO VALID JOB - SYSTEM: {system_resources}")
-            next_job = None
+            raise NoValidJobInListException(system_resources)
         # pylint: enable=C0330
 
         return next_job
