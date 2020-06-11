@@ -2,7 +2,7 @@
 Module for monitor system valid resources of spark and assign resources for jobs
 Author: Po-Chun, Lu
 """
-from typing import Dict, Optional
+from typing import Dict
 
 from loguru import logger
 
@@ -43,7 +43,7 @@ class JobMonitor:
             }
         }
 
-    def get_single_job_resources(self, job: Job) -> Optional[Dict[str, int]]:
+    def get_single_job_resources(self, job: Job) -> Dict[str, int]:
         """[summary]
 
         Arguments:
@@ -59,7 +59,7 @@ class JobMonitor:
 
         except KeyError as err:
             logger.error(f"Job Resources not exist: {err}")
-            return None
+            raise ValueError
 
     def fetch_current_system_resources_from_api(self) -> Dict[str, Dict]:
         """Get Spark System Valid Resources

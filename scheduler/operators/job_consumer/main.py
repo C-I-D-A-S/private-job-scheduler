@@ -54,8 +54,11 @@ class JobConsumer:
         return self.total_level - 1
 
     def _consume_job(self, job: Job) -> None:
-        # setup job cpu & mem usage based on system status
-        job.job_resources = self.job_monitor.get_single_job_resources(job)
+        try:
+            # setup job cpu & mem usage based on system status
+            job.job_resources = self.job_monitor.get_single_job_resources(job)
+        except ValueError:
+            return
 
         # TODO: Remove for Prod
         if job.job_params["resources"]:
@@ -66,12 +69,9 @@ class JobConsumer:
             num = job.job_params["num"]
             job.job_resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
 
-        # ori: deadline - request_time
+        # ori: deadline - request_time, new: deadline - request_time - computing_time
         job.job_times["schedule_time"] -= job.job_resources["computing_time"]
         logger.debug(f'schedule_time: {job.job_times["schedule_time"]}')
-
-        if not job.job_resources:
-            return
 
         job_level = self._extract_job_level(job)
         if SCHEDULER_CONFIG["IS_RENEW_BEFORE_INSERT"]:
