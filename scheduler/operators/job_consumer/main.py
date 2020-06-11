@@ -2,26 +2,23 @@
 Entry Module for handling coming jobs
 Author: Po-Chun, Lu
 """
-from typing import Tuple
-import json
-from datetime import datetime
+from typing import Tuple, List, Dict
 
 from loguru import logger
 
 from config import (
     KAFKA_TOPIC_CONFIG,
     SCHEDULER_CONFIG,
-    AIRFLOW_CONFIG,
-    JOB_TRIGGER_CONFIG,
-    DATE_FORMAT,
-    get_exp_config,
 )
 from operators.job_monitor.main import JobMonitor
 from operators.job_consumer.resources.base_job import Job
 from operators.job_consumer.resources import STAGING_LIST
-from operators.job_consumer.plugins import QUEUE_SELECTOR, JOB_SELECTOR
-
-from utils.common import send_post_request
+from operators.job_consumer.plugins import QUEUE_SELECTOR, JOB_SELECTOR, send_job
+from operators.job_consumer.plugins.job_selector.exceptions import (
+    EmptyListException,
+    NoValidJobInListException,
+    NoValidJobInAllListException,
+)
 
 
 class JobConsumer:
@@ -69,7 +66,9 @@ class JobConsumer:
             num = job.job_params["num"]
             job.job_resources["computing_time"] = int(((num - 50) / 50) * 15 + 30)
 
+        # ori: deadline - request_time
         job.job_times["schedule_time"] -= job.job_resources["computing_time"]
+        logger.debug(f'schedule_time: {job.job_times["schedule_time"]}')
 
         if not job.job_resources:
             return
@@ -92,6 +91,45 @@ class JobConsumer:
                     job = stage_list.pop()
                     self.stage_lists[level].insert(job)
 
+    def _re_pick_next_valid_job(
+        self, valid_queues: List[int], system_resources: Dict
+    ) -> Job:
+        candidate_queues = valid_queues.copy()
+        for queue_level in valid_queues:
+            if len(self.stage_lists[queue_level].job_list) == 0:
+                candidate_queues.remove(queue_level)
+
+        logger.warning(f"Other Non Empty Queues: {candidate_queues}")
+        for queue_level in candidate_queues:
+            try:
+                next_queue = self.stage_lists[queue_level]
+                next_job = JOB_SELECTOR.select_job(
+                    next_queue.tolist(), system_resources
+                )
+                next_queue.remove(next_job)
+                logger.warning(f"Final Pick Level {next_queue.level}")
+                break
+            except NoValidJobInListException as error:
+                logger.warning(f"Level {queue_level} {error}")
+                continue
+        else:
+            raise NoValidJobInAllListException
+
+        return next_job
+
+    def _handle_no_valid_job_in_current_list(
+        self, invalid_queue_level, system_resources
+    ):
+        try:
+            valid_queues = list(range(self.total_level))
+            valid_queues.pop(invalid_queue_level)
+
+            next_job = self._re_pick_next_valid_job(valid_queues, system_resources)
+            return next_job
+
+        except NoValidJobInAllListException:
+            raise EmptyListException
+
     def _pick_next_job(self) -> Job:
         """ When spark executor is free, it would pick a job which is the top priority of computing
 
@@ -101,82 +139,42 @@ class JobConsumer:
         system_resources = self.job_monitor.fetch_current_system_resources_from_api()
         next_queue = QUEUE_SELECTOR.select_queue(self.stage_lists)
         logger.info(
-            f"Current Ready Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
+            f"Current Queue - Level: {next_queue.level}, Length: {len(next_queue.job_list)}"
         )
 
-        next_job = JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
-        if next_job:
-            next_queue.pop()
+        try:
+            next_job = JOB_SELECTOR.select_job(next_queue.tolist(), system_resources)
+            next_queue.remove(next_job)
+
+        except EmptyListException:
+            raise
+
+        except NoValidJobInListException as error:
+            logger.warning(f"Level {next_queue.level} {error}")
+            # next_job pop out inside
+            next_job = self._handle_no_valid_job_in_current_list(
+                next_queue.level, system_resources
+            )
+
         return next_job
 
-    def _send_job_to_airflow(self, next_job) -> None:
-        send_post_request(
-            url=f'{AIRFLOW_CONFIG["URL"]}',
-            headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
-            data=json.dumps(
-                {
-                    "conf": {
-                        "job_id": next_job.job_id,
-                        "job_type": next_job.job_type,
-                        "job_params": json.dumps(next_job.job_params),
-                        "job_times": json.dumps(next_job.job_times),
-                        "resources": json.dumps(next_job.job_resources),
-                        "num": next_job.job_params["num"],
-                        "request_time": datetime.strftime(
-                            next_job.job_times["request_time"], DATE_FORMAT
-                        ),
-                        "deadline": datetime.strftime(
-                            next_job.job_times["deadline"], DATE_FORMAT
-                        ),
-                        "executors": 1,
-                        "cpu": 1,
-                        "mem": 1,
-                        "computing_time": next_job.job_resources["computing_time"],
-                    }
-                }
-            ),
-        )
-
-    def _send_job_to_job_trigger(self, next_job) -> None:
-        job_times = {
-            key: datetime.strftime(next_job.job_times[key], DATE_FORMAT)
-            if key != "schedule_time"
-            else next_job.job_times[key]
-            for key in next_job.job_times
-        }
-        send_post_request(
-            url=f'{JOB_TRIGGER_CONFIG["URL"]}',
-            headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
-            data=json.dumps(
-                {
-                    "job_id": next_job.job_id,
-                    "job_type": next_job.job_type,
-                    "job_params": {**next_job.job_params, **get_exp_config()},
-                    "job_times": job_times,
-                    "job_resources": next_job.job_resources,
-                }
-            ),
-        )
-
     def _send_job_to_trigger(self, trigger_type: str = "api"):
-        next_job = self._pick_next_job()
+        try:
+            next_job = self._pick_next_job()
 
-        if not next_job:
-            logger.info("No staging or valid job in all queues")
+        except EmptyListException:
+            logger.warning("No staging or valid job in all queues")
             for queue in self.stage_lists:
-                logger.info(
-                    f"Queue Level: {queue.level}, Job Num: {len(queue.job_list)}"
+                logger.debug(
+                    f"- Queue Level: {queue.level}, Job Num: {len(queue.job_list)}"
                 )
 
             return "empty"
 
         logger.info(
-            f"\nResources: \n{next_job.job_resources}, \n Time: \n{next_job.job_times}"
+            f"Pick Job:\n Resources: \n{next_job.job_resources}, \n Time: \n{next_job.job_times}"
         )
-        if trigger_type == "api":
-            self._send_job_to_job_trigger(next_job)
-        else:
-            self._send_job_to_airflow(next_job)
+        send_job(next_job)
 
         self.job_monitor.update_current_system_resources(
             -next_job.job_resources["cpu"], -next_job.job_resources["mem"]
@@ -205,7 +203,7 @@ class JobConsumer:
 
             if self.job_monitor.system_resources["total"]["cpu"] < 1:
                 logger.warning(
-                    f"RESOURCE FULL USE: {self.job_monitor.system_resources}"
+                    f"No more resources : {self.job_monitor.system_resources}"
                 )
 
         elif msg.topic == KAFKA_TOPIC_CONFIG["TOPIC_JOB_COMPLETE_NOTIFY"]:
