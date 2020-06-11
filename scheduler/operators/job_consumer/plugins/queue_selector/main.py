@@ -117,15 +117,23 @@ class EnvZipSelect(BaseQueueSelector):
         # how much times
         self.curr_queue_cursor = 1
 
-    def _update_queue_cursor_level(self) -> None:
-        self.curr_queue_cursor = 1
+    def _update_queue_cursor_level(self, pre_update: bool = False) -> None:
+        # not pre_update: send 1-1 job, then post-update to 1-2.
+        # pre_update: no more 0-x job, so pre-update cursor to 1-2, then send 1-1 job
+        if not pre_update:
+            self.curr_queue_cursor = 1
+        elif pre_update and self.queue_order[self.cross_queue_cursor] > 1:
+            self.curr_queue_cursor = 2
+        else:
+            self.curr_queue_cursor = 1
+
         self.cross_queue_cursor += 1
 
         if self.cross_queue_cursor >= len(self.queue_order):
             self.cross_queue_cursor = 0
 
     def _update_queue_cursor(self) -> None:
-        logger.info(
+        logger.debug(
             f"cross_queue_cursor: {self.cross_queue_cursor}, curr_queue_cursor: {self.curr_queue_cursor}"
         )
 
@@ -133,13 +141,13 @@ class EnvZipSelect(BaseQueueSelector):
         if self.curr_queue_cursor > self.queue_order[self.cross_queue_cursor]:
             self._update_queue_cursor_level()
 
-        logger.info(
+        logger.debug(
             f"next cross_queue_cursor: {self.cross_queue_cursor}, next curr_queue_cursor: {self.curr_queue_cursor}"
         )
 
     def _get_queue_level_with_length(self, stage_lists) -> int:
         ori_cross_queue_cursor = self.cross_queue_cursor
-        self._update_queue_cursor_level()
+        self._update_queue_cursor_level(pre_update=True)
 
         while len(stage_lists[self.cross_queue_cursor].job_list) == 0:
             self.cross_queue_cursor += 1
@@ -152,6 +160,9 @@ class EnvZipSelect(BaseQueueSelector):
                 logger.warning("No staging Job in all queues")
                 break
 
+        logger.debug(
+            f"next cross_queue_cursor: {self.cross_queue_cursor}, next curr_queue_cursor: {self.curr_queue_cursor}"
+        )
         return self.cross_queue_cursor
 
     def select_queue(self, stage_lists) -> STAGING_LIST:
