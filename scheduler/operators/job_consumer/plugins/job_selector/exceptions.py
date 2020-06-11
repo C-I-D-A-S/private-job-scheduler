@@ -1,3 +1,11 @@
+"""
+Collection of job select exceptions
+Define blank queue, system resource is not enough cases
+
+Author: Po-Chun, Lu
+"""
+
+
 class EmptyListException(Exception):
     """ The current staging List is empty
 
@@ -25,5 +33,3 @@ class NoValidJobInAllListException(Exception):
     """ There is no valid job in all of current staging lists
 
     """
-
-    pass

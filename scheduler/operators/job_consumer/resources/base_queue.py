@@ -13,7 +13,15 @@ from operators.job_consumer.resources.base_job import Job
 
 
 class BaseStagingList:
+    """ Job Queue for buffering each level job request before assigning to worker
+        Basic List Version
+    """
+
     def __init__(self, level):
+        """
+        Arguments:
+            level {int} -- importance of this list
+        """
         self.level = level
 
         # for job storaging
@@ -21,24 +29,28 @@ class BaseStagingList:
 
     @abc.abstractmethod
     def insert(self, job: Job) -> None:
-        pass
+        """ insert new job to job queue """
+        return NotImplemented
 
     @abc.abstractmethod
     def pop(self) -> Job:
-        pass
+        """ pop job from job queue """
+        return NotImplemented
 
-    @abc.abstractmethod
     def renew_jobs_priority(self) -> None:
+        """ recompute the job priority since the scheduling time would change
+        """
         self.job_list = list(map(lambda job: job.renew_priority(), self.job_list))
 
-    @abc.abstractmethod
     def tolist(self) -> List[Job]:
+        """ return a priority sorted list for job selector iterating and pick a valid job
+        """
         return self.job_list
 
 
 class DequeStagingList:
     """ Job Queue for buffering each level job request before assigning to worker
-        Basic Version
+        Deque Version
     """
 
     def __init__(self, level: int) -> None:
@@ -67,7 +79,7 @@ class DequeStagingList:
         self.job_list = deque(map(lambda job: job.renew_priority(), self.job_list))
 
     def tolist(self) -> Deque[Job]:
-        """ return a priority sorted list for job selector iterating and pick a valid job
+        """ return deque for job selector iterating and pick a valid job
         """
         return self.job_list
 
@@ -107,6 +119,8 @@ class HeapStagingList:
         self.job_list = list(map(lambda job: job.renew_priority(), self.job_list))
 
     def tolist(self) -> List[Job]:
+        """ return sorted list type for job selector iterating and pick a valid job
+        """
         return sorted(self.job_list)
 
 

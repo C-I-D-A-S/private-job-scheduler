@@ -13,7 +13,9 @@ logger.remove()
 
 
 def formatter(record):
-    # 10: Debug, 20: INFO, 25: SUCCESS, 30: WARNING, 40: ERROR, 50: CRITICAL
+    """ log text formatter
+        10: Debug, 20: INFO, 25: SUCCESS, 30: WARNING, 40: ERROR, 50: CRITICAL
+    """
     time_str = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> | "
     formate_map = {
         10: "<blue><b>{level: <8}</b></> | - <blue><b>{message}</b></>\n",

@@ -13,7 +13,7 @@ from config import (
 from operators.job_monitor.main import JobMonitor
 from operators.job_consumer.resources.base_job import Job
 from operators.job_consumer.resources import STAGING_LIST
-from operators.job_consumer.plugins import QUEUE_SELECTOR, JOB_SELECTOR, send_job
+from operators.job_consumer.plugins import QUEUE_SELECTOR, JOB_SELECTOR, SEND_JOB
 from operators.job_consumer.plugins.job_selector.exceptions import (
     EmptyListException,
     NoValidJobInListException,
@@ -158,7 +158,7 @@ class JobConsumer:
 
         return next_job
 
-    def _send_job_to_trigger(self, trigger_type: str = "api"):
+    def _send_job_to_trigger(self):
         try:
             next_job = self._pick_next_job()
 
@@ -174,7 +174,7 @@ class JobConsumer:
         logger.info(
             f"Pick Job:\n Resources: \n{next_job.job_resources}, \n Time: \n{next_job.job_times}"
         )
-        send_job(next_job)
+        SEND_JOB(next_job)
 
         self.job_monitor.update_current_system_resources(
             -next_job.job_resources["cpu"], -next_job.job_resources["mem"]

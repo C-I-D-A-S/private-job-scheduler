@@ -80,6 +80,12 @@ class JobMonitor:
         return self.system_resources
 
     def update_current_system_resources(self, cpu, mem):
+        """ increase system valid resource when a job complete
+
+        Args:
+            cpu (int): cpu usage of the latest finished job
+            mem (int): mem usage of the latest finished job
+        """
         self.system_resources["total"]["cpu"] += cpu
         self.system_resources["total"]["mem"] += mem
         logger.info(f"Current System Resources: {self.system_resources}")

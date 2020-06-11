@@ -1,3 +1,8 @@
+"""
+Collection of spark trigger method
+Author: Po-Chun, Lu
+"""
+
 import json
 from datetime import datetime
 
@@ -15,10 +20,15 @@ from utils.common import send_post_request
 def send_job_to_none(next_job) -> None:
     """ For Local Testing
     """
-    logger.success(f'\n{"-"*20}\nFake send success \n{"-"*20}')
+    logger.success(f'\n{"-"*20}\nFake send success {next_job.job_times}\n{"-"*20}')
 
 
 def send_job_to_airflow(next_job) -> None:
+    """ send job to airflow spark trigger
+
+    Args:
+        next_job (Job): the job that would send to spark
+    """
     send_post_request(
         url=f'{AIRFLOW_CONFIG["URL"]}',
         headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
@@ -48,6 +58,11 @@ def send_job_to_airflow(next_job) -> None:
 
 
 def send_job_to_job_trigger(next_job) -> None:
+    """ send job to spark trigger
+
+    Args:
+        next_job (Job): the job that would send to spark
+    """
     job_times = {
         key: datetime.strftime(next_job.job_times[key], DATE_FORMAT)
         if key != "schedule_time"

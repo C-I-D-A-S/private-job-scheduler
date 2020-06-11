@@ -9,4 +9,4 @@ from operators.job_consumer.plugins.job_operator_trigger.main import get_job_tri
 QUEUE_SELECTOR = get_queue_selector()
 JOB_SELECTOR = get_job_selector()
 
-send_job = get_job_trigger()
+SEND_JOB = get_job_trigger()
