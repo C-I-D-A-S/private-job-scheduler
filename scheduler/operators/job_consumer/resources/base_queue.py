@@ -37,6 +37,12 @@ class BaseStagingList:
         """ pop job from job queue """
         return NotImplemented
 
+    @abc.abstractmethod
+    def remove(self, job: Job):
+        """ remove specific job from list
+        """
+        return NotImplemented
+
     def renew_jobs_priority(self) -> None:
         """ recompute the job priority since the scheduling time would change
         """
@@ -72,6 +78,11 @@ class DequeStagingList:
         """ get the most urgent job for worker to operate
         """
         return self.job_list.popleft()
+
+    def remove(self, job: Job):
+        """ remove specific job from list
+        """
+        self.job_list.remove(job)
 
     def renew_jobs_priority(self) -> None:
         """ recompute the job priority since the scheduling time would change
@@ -112,6 +123,12 @@ class HeapStagingList:
         """ use heapsort for staging list sorting
         """
         heapq.heapify(self.job_list)
+
+    def remove(self, job: Job):
+        """ remove specific job from list
+        """
+        self.job_list.remove(job)
+        self.sort()
 
     def renew_jobs_priority(self) -> None:
         """ recompute the job priority since the scheduling time would change
